@@ -3,36 +3,37 @@ const fs = require('fs');
 const inquirer = require('inquirer');
 const generator = require('./readMeGen')
 // Create an array of questions for user input
+function init() {
 inquirer
     .prompt([
         {
             type: 'input',
             message: 'What is the title of your project?',
             default: 'Project Name',
-            name: 'readMeGen'
+            name: 'title'
         },
         {
             type: 'input',
             message: 'Describe your project',
             default: 'Project Description',
-            name: 'a readme markdown file generator'
+            name: 'description'
         },
         {
             type: 'input',
             message: 'Please Link your project repository',
-            default: 'Repository Link',
-            name: 'https://github.com/m3t4ldood/ACGreadMeGenerator'
+            default: 'https://github.com/m3t4ldood/ACGreadMeGenerator',
+            name: 'github'
         },
         {
             type: 'input',
             message: 'Please Link your deployed application',
-            default: 'Deployed App Link',
-            name: 'https://m3t4ldood.github.io/ACGreadMeGenerator'
+            default: 'https://m3t4ldood.github.io/ACGreadMeGenerator',
+            name: 'deployed'
         },
         {
             type: 'checkbox',
             message: 'Which technologies were used?',
-            name: 'coding languages',
+            name: 'languages',
             choices: [
                 'HTML', 'CSS', 'JavaScript', 'jQuery', 'Node', 'Python',
             ],
@@ -41,14 +42,14 @@ inquirer
             type: 'input',
             message: 'Please Enter a User Story',
             default: 'loren ipsum',
-            name: 'user story'
+            name: 'userStory'
         }
     ])
 
     // Create a function to write README file
     .then((response) => {
         console.log(response)
-        const readmestring = generateREADME(response)
+        const readmestring = generate(response)
         console.log(readmestring)
         fs.writeToFile("README.md", readmestring, err => {
             if (err) {
@@ -61,7 +62,7 @@ inquirer
 
 
 // Create a function to initialize app
-function init() { }
+}
 
 // Function call to initialize app
 init();
