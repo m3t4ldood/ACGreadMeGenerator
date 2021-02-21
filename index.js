@@ -1,68 +1,96 @@
 // Include packages needed for this application
+
+const inquirer = require("inquirer");
 const fs = require('fs');
-const inquirer = require('inquirer');
-const generator = require('./readMeGen')
+const axios = require("axios");
+const generate = require('./utils/generateMarkdown.js');
+// TODO: license options
+
 // Create an array of questions for user input
+
+const questions = [
+    {
+        type: "input",
+        name: "title",
+        message: "What is your project title?"
+    },
+    {
+        type: "input",
+        name: "description",
+        message: "Please provide your project's description"
+    },
+    {
+        type: "input",
+        name: "installation",
+        message: "Please provide the installation instructions"
+    },
+    {
+        type: "input",
+        name: "usage",
+        message: "Please provide the project usage"
+    },
+    {
+        type: "input",
+        name: "licence",
+        message: "Please provide the project licence or your badge link"
+    },
+    {
+        type: "input",
+        name: "contributing",
+        message: "Please provide the contributing parties"
+    },
+    {
+        type: "input",
+        name: "test",
+        message: "Please provide the project tests"
+    },
+    {
+        type: "input",
+        name: "username",
+        message: "What is your github user name?"
+    },
+    {
+        type: "input",
+        name: "repo",
+        message: "What is your repo link?"
+    },
+];
+
+// inquirer provides an easy way to capture user input
+
+// TODO: Create a function to initialize app
+
 function init() {
-inquirer
-    .prompt([
-        {
-            type: 'input',
-            message: 'What is the title of your project?',
-            default: 'Project Name',
-            name: 'title'
-        },
-        {
-            type: 'input',
-            message: 'Describe your project',
-            default: 'Project Description',
-            name: 'description'
-        },
-        {
-            type: 'input',
-            message: 'Please Link your project repository',
-            default: 'https://github.com/m3t4ldood/ACGreadMeGenerator',
-            name: 'github'
-        },
-        {
-            type: 'input',
-            message: 'Please Link your deployed application',
-            default: 'https://m3t4ldood.github.io/ACGreadMeGenerator',
-            name: 'deployed'
-        },
-        {
-            type: 'checkbox',
-            message: 'Which technologies were used?',
-            name: 'languages',
-            choices: [
-                'HTML', 'CSS', 'JavaScript', 'jQuery', 'Node', 'Python',
-            ],
-        },
-        {
-            type: 'input',
-            message: 'Please Enter a User Story',
-            default: 'loren ipsum',
-            name: 'userStory'
-        }
-    ])
+    inquirer
+    .prompt(questions)
+    .then(function(data){
+        const queryUrl = `https://api.github.com/users/${data.username}`;
 
-    // Create a function to write README file
-    .then((response) => {
-        console.log(response)
-        const readmestring = generate(response)
-        console.log(readmestring)
-        fs.writeToFile("README.md", readmestring, err => {
+        // axios sends asynchronous HTTP requests to REST endpoints and perform CRUD operations
+
+        // axios.get(queryUrl).then(function(res) {
+            
+        //     const githubInfo = {
+        //         githubImage: res.data.avatar_url,
+        //         email: res.data.email,
+        //         profile: res.data.html_url,
+        //         name: res.data.name
+        //     };
+            
+            // TODO: Create a function to write README file
+            console.log(data)
+          fs.writeFile("README.md", generate(data), function(err) {
             if (err) {
-                console.log(err)
-            } else {
-                console.log('IT WORKS!')
-            }
-        })
-    })
+              throw err;
+            };
+    
+            console.log("Hey it works!");
+          });
+        // });
 
-
-// Create a function to initialize app
+});
 }
 
 // Function call to initialize app
+
 init();

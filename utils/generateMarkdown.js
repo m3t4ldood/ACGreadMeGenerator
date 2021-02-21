@@ -1,6 +1,7 @@
-# good readme gen
+var generateMarkdown = function(data){
+    return `# ${data.title}
 ## Description 
-makes a readme
+${data.description}
 ## Table of contents
 * [installation](#installation)
 * [usage](#usage)
@@ -10,16 +11,20 @@ makes a readme
 * [username](#username)
 * [repo](#repo)
 ## installation
-npm i
+${data.installation}
 ## usage
-makes a readme
+${data.usage}
 ## licence
-dunno
+${data.licence}
 ## contributors
-me
+${data.contributing}
 ## test
-node index.js
+${data.test}
 ## username
-m3t4ldood
+${data.username}
 ## repo
-github.com
+${data.repo}
+`;
+}
+
+module.exports = generateMarkdown;
