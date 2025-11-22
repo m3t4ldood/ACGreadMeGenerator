@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Markdown Generator — Editor + Live Preview</title>
+<style>
+  :root{
+    --bg:#0f1724;
+    --panel:#0b1220;
+    --muted:#9aa7b2;
+    --accent:#66d9ef;
+    --accent-2:#7ee787;
+    --text:#e6eef6;
+    --glass: rgba(255,255,255,0.03);
+    --radius:12px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+    --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#08101a 0%, #071523 100%);color:var(--text);font-family:var(--ui);-webkit-font-smoothing:antialiased}
+  .app{
+    max-width:1200px;margin:28px auto;padding:20px;border-radius:20px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    box-shadow: 0 8px 30px rgba(2,6,23,0.6); display:flex;flex-direction:column;gap:14px;
+  }
+  header{display:flex;align-items:center;gap:16px}
+  .logo{
+    width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#042433;font-family:var(--mono);font-size:18px;box-shadow:0 6px 18px rgba(0,0,0,0.5)
+  }
+  h1{margin:0;font-size:16px}
+  p.lead{margin:0;color:var(--muted);font-size:13px}
+  .topbar{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap}
+  .btn{
+    background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:10px;color:var(--text);cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,0.5)}
+  .btn.icon{padding:8px;border-radius:10px;width:40px;justify-content:center}
+  .controls{display:flex;gap:8px;align-items:center;margin-left:auto}
+  .toggle{display:inline-flex;align-items:center;gap:8px}
+  .area-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));padding:12px;border-radius:var(--radius);min-height:420px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;overflow:hidden}
+  .panel .title{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .editor{
+    flex:1;display:flex;flex-direction:column;overflow:hidden;border-radius:10px;background:rgba(0,0,0,0.04);border:1px dashed rgba(255,255,255,0.02)
+  }
+  textarea{
+    resize:none;border:0;background:transparent;color:var(--text);outline:none;padding:12px;font-family:var(--mono);font-size:14px;line-height:1.45;height:100%;width:100%;box-sizing:border-box;
+  }
+  .preview{
+    flex:1;overflow:auto;padding:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.0));border-radius:8px;color:var(--text)
+  }
+
+  /* Markdown styling in preview */
+  .preview h1{font-size:28px;margin:12px 0}
+  .preview h2{font-size:22px;margin:10px 0}
+  .preview h3{font-size:18px;margin:8px 0}
+  .preview p{margin:8px 0;color:#dce9f2}
+  .preview code{background:rgba(255,255,255,0.03);padding:3px 6px;border-radius:6px;font-family:var(--mono);font-size:13px}
+  .preview pre{background:#061018;padding:12px;border-radius:8px;overflow:auto;border:1px solid rgba(255,255,255,0.03)}
+  .preview a{color:var(--accent);text-decoration:underline}
+  .preview blockquote{border-left:4px solid rgba(255,255,255,0.05);padding-left:12px;margin:8px 0;color:var(--muted);font-style:italic}
+  .preview ul, .preview ol{margin:8px 0 8px 20px}
+  .preview table{border-collapse:collapse;width:100%;margin:8px 0}
+  .preview th, .preview td{border:1px solid rgba(255,255,255,0.04);padding:8px;text-align:left}
+  .toolbar{display:flex;gap:6px;flex-wrap:wrap;padding:8px;border-bottom:1px solid rgba(255,255,255,0.02)}
+  .small{font-size:12px;color:var(--muted)}
+  .meta{display:flex;gap:8px;align-items:center}
+  .range{width:140px}
+  .right-actions{display:flex;gap:8px}
+  .status{font-size:12px;color:var(--muted)}
+  .drop-hint{font-size:12px;color:var(--muted);text-align:center;padding:8px}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.02),transparent);margin:8px 0;border-radius:2px}
+  /* responsive */
+  @media (max-width:920px){
+    .area-wrap{grid-template-columns:1fr;align-items:stretch}
+    .controls{width:100%;margin-left:0}
+  }
+  /* helper */
+  .kbd{background:rgba(255,255,255,0.03);padding:4px 6px;border-radius:6px;font-family:var(--mono);font-size:12px}
+  .muted{color:var(--muted);font-size:13px}
+  input[type="file"]{display:none}
+  .footer{display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:13px;color:var(--muted);padding-top:6px}
+  .brand-small{font-weight:600;letter-spacing:0.6px}
+  .searchbar{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.02);padding:6px;border-radius:8px}
+  .right{margin-left:auto}
+</style>
+</head>
+<body>
+  <main class="app" role="main" aria-label="Markdown generator app">
+    <header>
+      <div class="logo">MD</div>
+      <div>
+        <h1>Markdown Generator</h1>
+        <p class="lead">Live editor, toolbar, image upload, download, copy, and export — standalone single file.</p>
+        <div class="topbar">
+          <div class="meta small">Version <strong>1.0</strong></div>
+          <div class="controls">
+            <div class="small muted">Shortcuts: <span class="kbd">Ctrl/Cmd + B</span>, <span class="kbd">I</span>, <span class="kbd">K</span></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="area-wrap" aria-live="polite">
+      <section class="panel" aria-label="Editor panel">
+        <div class="title">
+          <strong>Editor</strong>
+          <div class="drop-hint" id="dropHint">Drop images here to insert as data URLs</div>
+          <div class="right" style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <div id="wordCount" class="small muted">0 words</div>
+          </div>
+        </div>
+
+        <div class="toolbar" role="toolbar" aria-label="Editor toolbar">
+          <button class="btn" data-action="bold" title="Bold (Ctrl/Cmd+B)"><strong>B</strong></button>
+          <button class="btn" data-action="italic" title="Italic (Ctrl/Cmd+I)"><em>I</em></button>
+          <button class="btn" data-action="h1" title="Heading 1">H1</button>
+          <button class="btn" data-action="h2" title="Heading 2">H2</button>
+          <button class="btn" data-action="h3" title="Heading 3">H3</button>
+          <button class="btn" data-action="code" title="Inline Code">{"</>"}</button>
+          <button class="btn" data-action="codeblock" title="Code Block">```</button>
+          <button class="btn" data-action="quote" title="Blockquote">❝</button>
+          <button class="btn" data-action="ul" title="Unordered List">• List</button>
+          <button class="btn" data-action="ol" title="Ordered List">1. List</button>
+          <button class="btn" data-action="link" title="Insert Link">🔗</button>
+          <button class="btn" data-action="image" title="Insert Image">🖼</button>
+          <button class="btn" id="insertTable" title="Insert Table">▦ Table</button>
+
+          <div style="width:8px"></div>
+
+          <label class="btn" title="Upload images">
+            📤 Upload
+            <input type="file" id="fileInput" accept="image/*" multiple>
+          </label>
+
+          <div style="flex:1"></div>
+
+          <button class="btn" id="previewToggle" title="Toggle live preview">Preview</button>
+          <button class="btn" id="copyMd" title="Copy Markdown">Copy MD</button>
+          <button class="btn" id="downloadMd" title="Download .md">Download .md</button>
+          <button class="btn" id="downloadHtml" title="Download HTML">Download HTML</button>
+          <button class="btn" id="clearAll" title="Clear editor">Clear</button>
+        </div>
+
+        <div class="editor" id="editorWrap">
+          <textarea id="editor" aria-label="Markdown input" spellcheck="false" placeholder="# Start writing your markdown..."></textarea>
+        </div>
+
+        <div class="footer">
+          <div class="brand-small">Standalone • No external libs</div>
+          <div class="small muted">Autosave local (browser) — live preview updates as you type.</div>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Preview panel">
+        <div class="title">
+          <strong>Preview</strong>
+          <div class="small muted" style="margin-left:auto" id="previewType">Rendered HTML</div>
+        </div>
+
+        <div class="preview" id="preview" tabindex="0" aria-live="polite">
+          <!-- rendered markdown will appear here -->
+          <div class="muted" style="text-align:center;margin-top:80px">Live preview — start typing on the left.</div>
+        </div>
+
+      </section>
+    </section>
+
+    <div style="height:10px"></div>
+
+  </main>
+
+<script>
+/*
+  Markdown Generator — single-file
+  - Lightweight markdown -> HTML converter with common features
+  - Toolbar actions insert markdown around selection
+  - Image upload converted to data URL and inserted as markdown
+  - Download .md and HTML
+  - Copy markdown
+  - Autosave to localStorage
+  - Basic sanitization by escaping before converting
+*/
+
+(() => {
+  // DOM refs
+  const editor = document.getElementById('editor');
+  const preview = document.getElementById('preview');
+  const fileInput = document.getElementById('fileInput');
+  const downloadMd = document.getElementById('downloadMd');
+  const downloadHtml = document.getElementById('downloadHtml');
+  const copyMd = document.getElementById('copyMd');
+  const clearAll = document.getElementById('clearAll');
+  const previewToggle = document.getElementById('previewToggle');
+  const dropHint = document.getElementById('dropHint');
+  const wordCountEl = document.getElementById('wordCount');
+  const insertTable = document.getElementById('insertTable');
+
+  const LOCAL_KEY = 'mdgen_content_v1';
+  const AUTOSAVE_DELAY = 600; // ms
+
+  // initial load
+  editor.value = localStorage.getItem(LOCAL_KEY) || `# Welcome to the Markdown Generator
+
+This editor supports:
+- Headings (use the toolbar or #)
+- **Bold**, *italic*, \`inline code\`
+- Fenced code blocks with triple backticks:
+\`\`\`js
+console.log('hello world')
+\`\`\`
+- Links, images, tables, lists, and blockquotes.
+
+Drop or upload images to insert them as data URLs.
+
+Happy writing!`;
+
+  // --- Utility helpers ---
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, ch => {
+      switch(ch){
+        case '&': return '&amp;';
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '"': return '&quot;';
+        case "'": return '&#39;';
+        default: return ch;
+      }
+    });
+  }
+
+  // Basic markdown -> HTML converter.
+  // This is a focused, robust, single-file converter for common Markdown constructs.
+  function markdownToHtml(md){
+    if(!md) return '';
+    // Normalize line endings
+    let text = md.replace(/\r\n?/g, '\n');
+
+    // Protect code blocks: extract fenced blocks and replace with placeholders
+    const codeBlocks = [];
+    text = text.replace(/(^|\n)```(\w+)?\n([\s\S]*?)\n```/g, (m, pre, lang, code) => {
+      const id = codeBlocks.length;
+      codeBlocks.push({lang: lang || '', code: code});
+      return `\n\n@@CODEBLOCK${id}@@\n\n`;
+    });
+
+    // Protect indented code blocks (4 spaces or a tab)
+    text = text.replace(/(^|\n)(?:\t| {4})([^\n]+\n(?:\t| {4}[^\n]+\n)*)/g, (m, pre, block) => {
+      const id = codeBlocks.length;
+      // remove leading tabs or 4 spaces
+      const cleaned = block.replace(/^\t/gm, '').replace(/^ {4}/gm, '');
+      codeBlocks.push({lang:'', code:cleaned});
+      return `\n\n@@CODEBLOCK${id}@@\n\n`;
+    });
+
+    // Escape HTML in the rest
+    text = escapeHtml(text);
+
+    // Convert images: ![alt](url "title")
+    text = text.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]+)")?\)/g, (m, alt, url, title) => {
+      alt = alt || '';
+      title = title ? ` title="${escapeHtml(title)}"` : '';
+      return `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}"${title} style="max-width:100%;height:auto;border-radius:6px;display:block;margin:8px 0">`;
+    });
+
+    // Convert links: [text](url "title")
+    text = text.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"([^"]+)")?\)/g, (m, label, url, title) => {
+      title = title ? ` title="${escapeHtml(title)}"` : '';
+      return `<a href="${escapeHtml(url)}"${title} target="_blank" rel="noopener noreferrer">${label}</a>`;
+    });
+
+    // Horizontal rules
+    text = text.replace(/^\s*(\-{3,}|\*{3,}|_{3,})\s*$/gm, '<hr>');
+
+    // Headings: #### to #
+    text = text.replace(/^(#{1,6})\s*(.+)$/gm, (m, hashes, title) => {
+      const lvl = Math.min(6, hashes.length);
+      return `<h${lvl}>${title.trim()}</h${lvl}>`;
+    });
+
+    // Blockquotes (may be nested) - handle simple single-level for robustness
+    text = text.replace(/(^|\n)>\s?(.*?(?:\n(?!\n|>)[^\n]*)*)/g, (m, pre, quote) => {
+      const inner = quote.replace(/^\>\s?/gm, '');
+      return `\n<blockquote>${inner.trim()}</blockquote>\n`;
+    });
+
+    // Unordered lists
+    // Convert groups of lines that start with -, +, or *
+    text = text.replace(/(^|\n)(?:[ \t]*)((?:[-+*]\s+.+\n?)+)/g, (m, pre, listBlock) => {
+      if(/@@CODEBLOCK\d+@@/.test(listBlock)) return listBlock; // skip placeholder parts
+      const items = listBlock.trim().split(/\n+/).map(line => line.replace(/^[\s]*[-+*]\s+/, '').trim());
+      return '\n<ul>\n' + items.map(i => `<li>${i}</li>`).join('\n') + '\n</ul>\n';
+    });
+
+    // Ordered lists
+    text = text.replace(/(^|\n)(?:[ \t]*)((?:\d+\.\s+.+\n?)+)/g, (m, pre, listBlock) => {
+      if(/@@CODEBLOCK\d+@@/.test(listBlock)) return listBlock;
+      const items = listBlock.trim().split(/\n+/).map(line => line.replace(/^\d+\.\s+/, '').trim());
+      return '\n<ol>\n' + items.map(i => `<li>${i}</li>`).join('\n') + '\n</ol>\n';
+    });
+
+    // Tables: simple pipe tables
+    // Find blocks that contain pipes and dashes for header separator
+    text = text.replace(/(^|\n)((?:\|?.+\|.*\n)+\|?[-: \t|]+\|?.*\n((?:\|?.+\|.*\n?)*))/g, (m, pre, tableBlock) => {
+      const lines = tableBlock.trim().split('\n').filter(Boolean);
+      if(lines.length < 2) return tableBlock;
+      const headers = lines[0].split('|').map(s => s.trim()).filter((x,i) => !(x === '' && (i === 0 || i === lines[0].split('|').length-1)));
+      const rows = lines.slice(2).map(r => r.split('|').map(s => s.trim()).filter((x,i) => !(x === '' && (i === 0 || i === r.split('|').length-1))));
+      let out = '<table>\n<thead>\n<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>\n</thead>\n<tbody>\n';
+      for(const r of rows){
+        if(r.length === 0) continue;
+        out += '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>\n';
+      }
+      out += '</tbody>\n</table>\n';
+      return out;
+    });
+
+    // Inline code
+    text = text.replace(/`([^`]+)`/g, (m, code) => `<code>${code}</code>`);
+
+    // Bold (strong) **text** or __text__
+    text = text.replace(/(\*\*|__)(?=\S)([\s\S]*?\S)\1/g, '<strong>$2</strong>');
+
+    // Italic *text* or _text_
+    // avoid interfering with bold already processed
+    text = text.replace(/(\*|_)(?=\S)([\s\S]*?\S)\1/g, '<em>$2</em>');
+
+    // Line breaks: double newline -> paragraph, single newline -> <br> only inside paragraphs
+    // Split into paragraphs by double newline
+    const paras = text.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+    const processedParas = paras.map(p => {
+      // leave if already block element (starts with <h, <ul, <ol, <pre, <blockquote, <table, <hr, <img)
+      if(/^(<h|<ul|<ol|<pre|<blockquote|<table|<hr|<img|@@CODEBLOCK)/.test(p)) return p;
+      // single newlines become <br>
+      return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+    });
+
+    text = processedParas.join('\n\n');
+
+    // Reinsert code blocks
+    text = text.replace(/@@CODEBLOCK(\d+)@@/g, (m, idx) => {
+      const cb = codeBlocks[Number(idx)];
+      if(!cb) return '';
+      const langClass = cb.lang ? ` class="language-${escapeHtml(cb.lang)}"` : '';
+      return `<pre><code${langClass}>${escapeHtml(cb.code)}</code></pre>`;
+    });
+
+    // final tweaks: remove repeated paragraph wrappers around block elements
+    text = text.replace(/<p>\s*(<(?:h|ul|ol|pre|blockquote|table|img)[\s\S]*?>[\s\S]*?)\s*<\/p>/g, '$1');
+
+    return text.trim();
+  }
+
+  // Render and update preview
+  function render(){
+    const md = editor.value;
+    const html = markdownToHtml(md);
+    preview.innerHTML = html || '<div class="muted" style="text-align:center;margin-top:80px">Live preview — start typing on the left.</div>';
+    updateWordCount(md);
+  }
+
+  // Word count
+  function updateWordCount(md){
+    const words = (md || '').trim().split(/\s+/).filter(Boolean).length;
+    const chars = (md || '').length;
+    wordCountEl.textContent = words + ' words • ' + chars + ' chars';
+  }
+
+  // Debounced autosave and render
+  let saveTimer = null;
+  function scheduleSaveAndRender(){
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      localStorage.setItem(LOCAL_KEY, editor.value);
+      render();
+    }, AUTOSAVE_DELAY);
+  }
+
+  // Toolbar behavior
+  function surroundSelection(before, after, placeholder){
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const val = editor.value;
+    const selected = val.slice(start, end) || placeholder || '';
+    const newVal = val.slice(0, start) + before + selected + after + val.slice(end);
+    editor.value = newVal;
+    // set selection inside for convenience
+    const cursorStart = start + before.length;
+    const cursorEnd = cursorStart + selected.length;
+    editor.focus();
+    editor.setSelectionRange(cursorStart, cursorEnd);
+    scheduleSaveAndRender();
+  }
+
+  function prefixLine(prefix){
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const val = editor.value;
+    // find start of the first selected line
+    const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+    const before = val.slice(0, lineStart);
+    const selection = val.slice(lineStart, end);
+    const after = val.slice(end);
+    // prefix each line in selection
+    const replaced = selection.split('\n').map(l => prefix + l).join('\n');
+    editor.value = before + replaced + after;
+    editor.focus();
+    editor.setSelectionRange(lineStart, lineStart + replaced.length);
+    scheduleSaveAndRender();
+  }
+
+  // Attach toolbar actions
+  document.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const action = btn.getAttribute('data-action');
+      switch(action){
+        case 'bold': surroundSelection('**','**','bold text'); break;
+        case 'italic': surroundSelection('*','*','italic text'); break;
+        case 'h1': prefixLine('# '); break;
+        case 'h2': prefixLine('## '); break;
+        case 'h3': prefixLine('### '); break;
+        case 'code': surroundSelection('`','`','code'); break;
+        case 'codeblock': surroundSelection('\n```\n','\n```\n','// code'); break;
+        case 'quote': prefixLine('> '); break;
+        case 'ul': prefixLine('- '); break;
+        case 'ol': prefixLine('1. '); break;
+        case 'link': {
+          const url = prompt('Enter URL', 'https://');
+          if(url !== null) surroundSelection('[','](' + url + ')','link text');
+          break;
+        }
+        case 'image': {
+          const url = prompt('Image URL or leave blank to upload', '');
+          if(!url){
+            fileInput.click();
+          } else {
+            surroundSelection('![](', ')', url);
+          }
+          break;
+        }
+      }
+    });
+  });
+
+  // Insert table helper
+  insertTable.addEventListener('click', () => {
+    const cols = parseInt(prompt('Columns', '3'), 10) || 3;
+    const rows = parseInt(prompt('Rows (including header)', '2'), 10) || 2;
+    let header = '|' + Array(cols).fill(' Header ').join('|') + '|\n';
+    let sep = '|' + Array(cols).fill('---').join('|') + '|\n';
+    let body = '';
+    for(let r = 1; r < rows; r++){
+      body += '|' + Array(cols).fill(' cell ').join('|') + '|\n';
+    }
+    surroundSelection('\n', '\n', header + sep + body);
+  });
+
+  // File upload handling - convert images to data URLs and insert markdown image link
+  fileInput.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    for(const f of files){
+      if(!f.type.startsWith('image/')) continue;
+      const dataUrl = await readFileAsDataURL(f);
+      const mdImg = `![${escapeFilename(f.name)}](${dataUrl})\n`;
+      surroundSelection('', '\n' + mdImg, mdImg);
+    }
+    fileInput.value = '';
+  });
+
+  function escapeFilename(n){ return n.replace(/[\[\]]/g,'').replace(/\s+/g,'_'); }
+  function readFileAsDataURL(file){
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = () => rej(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  // Drag & drop images into editor area
+  const editorWrap = document.getElementById('editorWrap');
+  ['dragenter','dragover'].forEach(evt => {
+    editorWrap.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      dropHint.style.opacity = 1;
+    });
+  });
+  ['dragleave','drop'].forEach(evt => {
+    editorWrap.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      dropHint.style.opacity = 0.6;
+    });
+  });
+  editorWrap.addEventListener('drop', async (e) => {
+    const dt = e.dataTransfer;
+    const files = Array.from(dt.files || []);
+    for(const f of files){
+      if(!f.type.startsWith('image/')) continue;
+      const dataUrl = await readFileAsDataURL(f);
+      const mdImg = `![${escapeFilename(f.name)}](${dataUrl})\n`;
+      // append at cursor
+      const pos = editor.selectionEnd;
+      editor.value = editor.value.slice(0,pos) + '\n' + mdImg + editor.value.slice(pos);
+    }
+    scheduleSaveAndRender();
+  });
+
+  // Download functions
+  function download(filename, text, mime='text/plain'){
+    const blob = new Blob([text], {type: mime + ';charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 3000);
+  }
+
+  downloadMd.addEventListener('click', () => {
+    download('document.md', editor.value, 'text/markdown');
+  });
+
+  downloadHtml.addEventListener('click', () => {
+    const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Exported Markdown</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;margin:28px;color:#0b1220}
+pre{background:#f5f7fa;padding:12px;border-radius:6px;overflow:auto}
+code{font-family:monospace}
+img{max-width:100%}
+</style>
+</head>
+<body>
+${renderedForExport(editor.value)}
+</body>
+</html>`;
+    download('document.html', html, 'text/html');
+  });
+
+  // Copy markdown text
+  copyMd.addEventListener('click', async () => {
+    try{
+      await navigator.clipboard.writeText(editor.value);
+      copyMd.textContent = 'Copied ✓';
+      setTimeout(()=> copyMd.textContent = 'Copy MD', 1200);
+    }catch(e){
+      alert('Copy failed: ' + (e && e.message ? e.message : String(e)));
+    }
+  });
+
+  // Clear
+  clearAll.addEventListener('click', () => {
+    if(confirm('Clear editor content? This cannot be undone.')) {
+      editor.value = '';
+      scheduleSaveAndRender();
+    }
+  });
+
+  // Toggle preview focus
+  previewToggle.addEventListener('click', () => {
+    preview.focus();
+    previewToggle.animate([{transform:'translateY(-2px)'},{transform:'none'}],{duration:160});
+  });
+
+  // Keyboard shortcuts for formatting
+  editor.addEventListener('keydown', (e) => {
+    const mod = e.ctrlKey || e.metaKey;
+    if(mod && e.key.toLowerCase() === 'b'){ e.preventDefault(); surroundSelection('**','**','bold text'); }
+    if(mod && e.key.toLowerCase() === 'i'){ e.preventDefault(); surroundSelection('*','*','italic text'); }
+    if(mod && e.key.toLowerCase() === 'k'){ e.preventDefault(); const url = prompt('Paste link URL', 'https://'); if(url!==null) surroundSelection('[','](' + url + ')','link text'); }
+    // Tab inserts four spaces
+    if(e.key === 'Tab'){ e.preventDefault();
+      const start = editor.selectionStart, end = editor.selectionEnd;
+      editor.setRangeText('    ', start, end, 'end');
+      scheduleSaveAndRender();
+    }
+  });
+
+  // live input
+  editor.addEventListener('input', () => scheduleSaveAndRender());
+
+  // sync scroll preview (approximate)
+  editor.addEventListener('scroll', () => {
+    const ratio = editor.scrollTop / (editor.scrollHeight - editor.clientHeight || 1);
+    preview.scrollTop = Math.max(0, Math.floor(ratio * (preview.scrollHeight - preview.clientHeight)));
+  });
+
+  // initial render
+  render();
+
+  // helper to produce HTML for export (sanitized using our converter)
+  function renderedForExport(md){
+    return markdownToHtml(md);
+  }
+
+  // On before unload save
+  window.addEventListener('beforeunload', () => {
+    localStorage.setItem(LOCAL_KEY, editor.value);
+  });
+
+  // Accessibility: focusable preview for reading
+  preview.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') return;
+    if(e.key === 'Escape') editor.focus();
+  });
+
+  // Simple UI niceties: double click preview to toggle raw HTML/Rendered
+  let showRaw = false;
+  preview.addEventListener('dblclick', () => {
+    showRaw = !showRaw;
+    if(showRaw) {
+      preview.innerText = markdownToHtml(editor.value);
+      document.getElementById('previewType').textContent = 'Raw HTML';
+    } else {
+      render();
+      document.getElementById('previewType').textContent = 'Rendered HTML';
+    }
+  });
+
+  // If user pastes an image into the editor (clipboard), handle it
+  window.addEventListener('paste', async (e) => {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for(const it of items){
+      if(it.type && it.type.startsWith('image/')){
+        const file = it.getAsFile();
+        const dataUrl = await readFileAsDataURL(file);
+        const mdImg = `![pasted-image](${dataUrl})\n`;
+        const pos = editor.selectionEnd;
+        editor.value = editor.value.slice(0,pos) + '\n' + mdImg + editor.value.slice(pos);
+        scheduleSaveAndRender();
+        e.preventDefault();
+        break;
+      }
+    }
+  });
+
+  // Optional: quick demo content insertion for new users (only if empty and first visit)
+  (function firstTimeDemo(){
+    const seen = localStorage.getItem('mdgen_seen_v1');
+    if(!seen){
+      localStorage.setItem('mdgen_seen_v1', '1');
+      // already loaded initial content above, so don't overwrite
+    }
+  })();
+
+})();
+</script>
+</body>
+</html>
